@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. `--brand` and `--accent` come from admin settings (Branding)
+ * and are set on <body>; everything else is derived here so colours are never
+ * scattered through components.
+ */
+:root {
+  --ink: #111512; /* charcoal text */
+  --night: var(--brand, #0e1a16); /* near-black green: header, footer, dark sections */
+  --forest: #12322a; /* deep forest green: category cards, buttons */
+  --cream: #f6f2ea; /* warm ivory page background */
+  --paper: #fdfbf7; /* cards */
+  --line: #e4ddcf; /* fine borders */
+  --muted: #6d6a62; /* secondary text */
+  --champagne: var(--accent, #d8bd8a); /* warm gold accent */
+}
+
+@theme inline {
+  --color-brand: var(--night);
+  --color-accent: var(--champagne);
+  --color-ink: var(--ink);
+  --color-night: var(--night);
+  --color-forest: var(--forest);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-champagne: var(--champagne);
+  --font-sans: var(--font-sans-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-serif), ui-serif, Georgia, serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--champagne);
+  outline-offset: 3px;
+}
+
+/* Small uppercase label used above section titles. */
+.eyebrow {
+  display: block;
+  width: fit-content;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+.eyebrow-dark {
+  color: #9a7b45;
+}
+
+.prose-job p + p {
+  margin-top: 1rem;
+}
+
+/* Subtle reveal on scroll — CSS only, skipped where unsupported or motion is reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

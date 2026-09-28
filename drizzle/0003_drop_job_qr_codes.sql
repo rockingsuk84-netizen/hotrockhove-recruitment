@@ -1,0 +1,1 @@
+DROP TABLE "job_qr_codes" CASCADE;

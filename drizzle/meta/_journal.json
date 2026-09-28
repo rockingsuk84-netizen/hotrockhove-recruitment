@@ -15,6 +15,20 @@
       "when": 1790540089054,
       "tag": "0001_public_design",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790630047752,
+      "tag": "0002_qr_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790630083031,
+      "tag": "0003_drop_job_qr_codes",
+      "breakpoints": true
     }
   ]
 }

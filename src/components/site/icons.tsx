@@ -69,6 +69,39 @@ const PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  // Admin navigation
+  grid: (
+    <>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+    </>
+  ),
+  inbox: <path d="M4 13.5 6.5 5h11l2.5 8.5M4 13.5V19h16v-5.5M4 13.5h4.5l1 2h5l1-2H20" />,
+  qr: (
+    <>
+      <rect x="4" y="4" width="6" height="6" rx="0.5" />
+      <rect x="14" y="4" width="6" height="6" rx="0.5" />
+      <rect x="4" y="14" width="6" height="6" rx="0.5" />
+      <path d="M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 18.5v1.5M20 14v1.5" />
+    </>
+  ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4 6 18M18 18l-1.6-1.6M7.6 7.6 6 6" />
+    </>
+  ),
+  users: (
+    <>
+      <circle cx="9" cy="8.5" r="3" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.8a3 3 0 0 1 0 5.4M17.5 14.2a5.5 5.5 0 0 1 3 4.8" />
+    </>
+  ),
+  shield: <path d="M12 3.5 5 6v5.5c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6l-7-2.5Z" />,
+  external: <path d="M14 4.5h5.5V10M19.5 4.5 11 13M18 14v5.5H4.5V6H10" />,
+  logout: <path d="M14.5 8V5.5h-9v13h9V16M10 12h10.5m-3-3 3 3-3 3" />,
 };
 
 export type IconName = keyof typeof PATHS;

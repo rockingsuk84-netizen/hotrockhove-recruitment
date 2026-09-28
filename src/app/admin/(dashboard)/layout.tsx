@@ -1,52 +1,46 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getSetting } from "@/lib/settings";
 import { canManageSettings, requireStaff } from "@/lib/session";
 import { signOut } from "../login/actions";
-import { AdminNav } from "./nav";
+import { AdminSidebar, type NavItem } from "./sidebar";
 
 export const metadata: Metadata = { title: { default: "Dashboard", template: "%s | Admin" }, robots: { index: false } };
 
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await requireStaff();
   const site = await getSetting("site");
-  const links = [
-    { href: "/admin", label: "Overview" },
-    { href: "/admin/jobs", label: "Jobs" },
-    { href: "/admin/applications", label: "Applications" },
+  const items: NavItem[] = [
+    { href: "/admin", label: "Overview", icon: "grid" },
+    { href: "/admin/jobs", label: "Jobs", icon: "briefcase" },
+    { href: "/admin/applications", label: "Applications", icon: "inbox" },
+    { href: "/admin/qr-codes", label: "QR codes", icon: "qr" },
     ...(canManageSettings(user)
       ? [
-          { href: "/admin/settings", label: "Configuration" },
-          { href: "/admin/users", label: "Staff" },
-          { href: "/admin/audit", label: "Audit log" },
+          {
+            href: "/admin/settings",
+            label: "Configuration",
+            icon: "settings",
+            children: [
+              { href: "/admin/settings/general", label: "Branding" },
+              { href: "/admin/settings/homepage", label: "Homepage" },
+              { href: "/admin/settings/notifications", label: "Notifications" },
+              { href: "/admin/settings/privacy", label: "Privacy & uploads" },
+              { href: "/admin/settings/storage", label: "File storage" },
+              { href: "/admin/settings/lists", label: "Lists" },
+            ],
+          },
+          { href: "/admin/users", label: "Staff", icon: "users" },
+          { href: "/admin/audit", label: "Audit log", icon: "shield" },
         ]
       : []),
   ];
 
   return (
     <div className="min-h-screen bg-stone-100">
-      <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link href="/admin" className="font-display text-lg font-semibold text-stone-900">
-            {site.brandName} <span className="font-sans text-sm font-normal text-stone-500">Admin</span>
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-stone-600 sm:inline">
-              {user.name} · <span className="capitalize">{user.role}</span>
-            </span>
-            <Link href="/" target="_blank" className="text-stone-600 hover:text-stone-900">
-              View site
-            </Link>
-            <form action={signOut}>
-              <button type="submit" className="font-medium text-stone-800 hover:underline">
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-        <AdminNav links={links} />
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      <AdminSidebar brandName={site.brandName} items={items} user={{ name: user.name, role: user.role }} signOut={signOut} />
+      <main className="px-4 py-8 sm:px-6 lg:ml-64 lg:px-10">
+        <div className="mx-auto max-w-6xl">{children}</div>
+      </main>
     </div>
   );
 }

@@ -26,6 +26,7 @@ export default async function AdminJobsPage() {
                   <th className="px-5 py-3">Location</th>
                   <th className="px-5 py-3 text-right">Applications</th>
                   <th className="px-5 py-3">Updated</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -50,6 +51,18 @@ export default async function AdminJobsPage() {
                       </Link>
                     </td>
                     <td className="px-5 py-3 text-stone-600">{formatDate(job.updatedAt)}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-2">
+                        <LinkButton href={`/admin/jobs/${job.id}`} variant="secondary" className="px-3 py-1.5 text-xs">
+                          Edit
+                        </LinkButton>
+                        {job.status === "published" && (
+                          <LinkButton href={`/jobs/${job.slug}`} target="_blank" variant="ghost" className="px-3 py-1.5 text-xs">
+                            View ↗
+                          </LinkButton>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

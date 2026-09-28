@@ -239,24 +239,35 @@ export const jobPositions = pgTable(
   (t) => [primaryKey({ columns: [t.jobId, t.positionId] })],
 );
 
+export const qrTargetType = pgEnum("qr_target_type", ["job", "page"]);
+
 /**
- * QR codes are generated in-house. Each row stores the source configuration so
- * poster/event/social codes resolve to `/jobs/{slug}?source={source}`.
+ * QR codes are managed centrally (Admin → QR codes) and generated in-house.
+ * Each printed code holds a short link on the site's own domain, /q/{code},
+ * which counts the scan and redirects to the current target with ?source=…
+ * so a printed code can be re-pointed later (e.g. when a job closes).
  */
-export const jobQrCodes = pgTable(
-  "job_qr_codes",
+export const qrCodes = pgTable(
+  "qr_codes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    jobId: uuid("job_id")
-      .notNull()
-      .references(() => jobs.id, { onDelete: "cascade" }),
-    source: text("source").notNull().default(""),
+    /** Short, unguessable code used in /q/{code}. */
+    code: text("code").notNull(),
     label: text("label").notNull(),
+    targetType: qrTargetType("target_type").notNull(),
+    /** Set when targetType = job. */
+    jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    /** Site-relative path when targetType = page, e.g. "/", "/jobs?department=front-of-house". */
+    path: text("path"),
+    /** Attribution tag appended as ?source=… (poster, event, instagram…). */
+    source: text("source"),
+    active: boolean("active").notNull().default(true),
     scanCount: integer("scan_count").notNull().default(0),
+    lastScannedAt: timestamp("last_scanned_at", { withTimezone: true }),
     createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
     ...timestamps,
   },
-  (t) => [uniqueIndex("job_qr_codes_job_source_uq").on(t.jobId, t.source)],
+  (t) => [uniqueIndex("qr_codes_code_uq").on(t.code), index("qr_codes_job_idx").on(t.jobId)],
 );
 
 /* -------------------------------------------------------------------------- */

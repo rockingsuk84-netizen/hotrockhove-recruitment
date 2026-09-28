@@ -12,12 +12,14 @@ export function normaliseSource(input: string | null | undefined): string {
     .slice(0, 40);
 }
 
-/** Canonical public job URL. QR codes always point to the app's own domain. */
-export function jobPublicUrl(slug: string, source?: string): string {
-  const url = new URL(`/jobs/${encodeURIComponent(slug)}`, env().APP_URL);
-  const s = normaliseSource(source);
-  if (s) url.searchParams.set("source", s);
-  return url.toString();
+/** Absolute URL on the site's own domain (APP_URL). */
+export function siteUrl(path: string): string {
+  return new URL(path, env().APP_URL).toString();
+}
+
+/** The short link printed in a QR code: /q/{code} redirects to the code's current target. */
+export function qrShortUrl(code: string): string {
+  return siteUrl(`/q/${encodeURIComponent(code)}`);
 }
 
 const OPTIONS = { errorCorrectionLevel: "M" as const, margin: 2 };

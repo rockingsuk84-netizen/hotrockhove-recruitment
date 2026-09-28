@@ -1,15 +1,14 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, t } from "@/db";
 import { Alert, Badge, Button, Card, JOB_STATUS_TONE, LinkButton, PageHeader } from "@/components/ui";
 import { formatDateTime, JOB_STATUS_LABELS } from "@/lib/format";
-import { jobPublicUrl, qrDataUrl } from "@/lib/qr";
 import { requireStaff } from "@/lib/session";
 import { getJobPositions, getTaxonomy } from "@/services/jobs";
-import { changeJobStatus, deleteQrCode } from "../actions";
+import { changeJobStatus } from "../actions";
 import { JobForm } from "../job-form";
-import { QrCreateForm } from "./qr-create-form";
 
 export const metadata = { title: "Edit job" };
 
@@ -22,131 +21,108 @@ export default async function EditJobPage({ params, searchParams }: PageProps<"/
   const job = await db.query.jobs.findFirst({ where: eq(t.jobs.id, id) });
   if (!job) notFound();
 
-  const [taxonomy, positions, qrCodes] = await Promise.all([
+  const [taxonomy, positions, [{ n: applicationCount }], [{ n: qrCount }]] = await Promise.all([
     getTaxonomy(),
     getJobPositions(id),
-    db.select().from(t.jobQrCodes).where(eq(t.jobQrCodes.jobId, id)).orderBy(asc(t.jobQrCodes.createdAt)),
+    db.select({ n: count() }).from(t.applications).where(eq(t.applications.jobId, id)),
+    db.select({ n: count() }).from(t.qrCodes).where(eq(t.qrCodes.jobId, id)),
   ]);
-  const qrs = await Promise.all(
-    qrCodes.map(async (q) => {
-      const url = jobPublicUrl(job.slug, q.source);
-      return { ...q, url, preview: await qrDataUrl(url) };
-    }),
-  );
-
-  const statusButtons = (
-    <>
-      {job.status !== "published" && (
-        <form action={changeJobStatus.bind(null, job.id, "published")}>
-          <Button type="submit" variant="accent">
-            Publish
-          </Button>
-        </form>
-      )}
-      {job.status === "published" && (
-        <form action={changeJobStatus.bind(null, job.id, "draft")}>
-          <Button type="submit" variant="secondary">
-            Unpublish
-          </Button>
-        </form>
-      )}
-      {job.status !== "closed" && (
-        <form action={changeJobStatus.bind(null, job.id, "closed")}>
-          <Button type="submit" variant="secondary">
-            Close job
-          </Button>
-        </form>
-      )}
-      {job.status === "published" && (
-        <LinkButton href={`/jobs/${job.slug}`} target="_blank" variant="ghost">
-          View public page ↗
-        </LinkButton>
-      )}
-    </>
-  );
 
   return (
     <>
-      <PageHeader
-        title={job.title}
-        description={
-          <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={JOB_STATUS_TONE[job.status]}>{JOB_STATUS_LABELS[job.status]}</Badge>
-            {job.publishedAt && <span>Published {formatDateTime(job.publishedAt)}</span>}
-            {job.closedAt && job.status === "closed" && <span>· Closed {formatDateTime(job.closedAt)}</span>}
-          </span>
-        }
-        actions={statusButtons}
-      />
+      <Link href="/admin/jobs" className="text-sm font-medium text-stone-600 hover:text-stone-900">
+        ← All jobs
+      </Link>
+      <div className="mt-3">
+        <PageHeader
+          title={job.title}
+          description={
+            <span className="flex flex-wrap items-center gap-2">
+              <Badge tone={JOB_STATUS_TONE[job.status]}>{JOB_STATUS_LABELS[job.status]}</Badge>
+              {job.featured && <Badge tone="amber">Featured on homepage</Badge>}
+              {job.publishedAt && <span>Published {formatDateTime(job.publishedAt)}</span>}
+            </span>
+          }
+        />
+      </div>
       {sp.saved && (
         <div className="mb-6">
           <Alert tone="success">Job saved.</Alert>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <JobForm
-          taxonomy={taxonomy}
-          initial={{
-            id: job.id,
-            title: job.title,
-            slug: job.slug,
-            summary: job.summary,
-            description: job.description,
-            responsibilities: job.responsibilities,
-            requirements: job.requirements,
-            benefits: job.benefits,
-            standoutPrompt: job.standoutPrompt,
-            locationId: job.locationId,
-            departmentId: job.departmentId,
-            employmentTypeId: job.employmentTypeId,
-            positionIds: positions.map((p) => p.id),
-            questions: job.questions,
-            featured: job.featured,
-            imageUrl: job.imageUrl,
-          }}
-        />
+      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-stone-500">Edit job details</h2>
+          <JobForm
+            taxonomy={taxonomy}
+            initial={{
+              id: job.id,
+              title: job.title,
+              slug: job.slug,
+              summary: job.summary,
+              description: job.description,
+              responsibilities: job.responsibilities,
+              requirements: job.requirements,
+              benefits: job.benefits,
+              standoutPrompt: job.standoutPrompt,
+              locationId: job.locationId,
+              departmentId: job.departmentId,
+              employmentTypeId: job.employmentTypeId,
+              positionIds: positions.map((p) => p.id),
+              questions: job.questions,
+              featured: job.featured,
+              imageUrl: job.imageUrl,
+            }}
+          />
+        </div>
 
-        <aside className="space-y-4">
-          <Card className="p-5">
-            <h2 className="font-semibold text-stone-900">QR codes</h2>
-            <p className="mt-1 text-sm text-stone-600">
-              Generated in-house. Each code opens this job&apos;s public page; the source records where applicants came from.
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <Card className="space-y-3 p-5">
+            <h2 className="font-semibold text-stone-900">Publishing</h2>
+            <p className="text-sm text-stone-600">
+              {job.status === "published"
+                ? "Live on the website and accepting applications."
+                : job.status === "draft"
+                  ? "Draft: not visible on the website."
+                  : "Closed: hidden from the website and not accepting applications."}
             </p>
             {job.status !== "published" && (
-              <p className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-900">Publish the job before printing QR codes — unpublished jobs show “not found”.</p>
+              <form action={changeJobStatus.bind(null, job.id, "published")}>
+                <Button type="submit" variant="accent" className="w-full">
+                  Publish
+                </Button>
+              </form>
             )}
-            <ul className="mt-4 space-y-5">
-              {qrs.map((q) => (
-                <li key={q.id} className="border-t border-stone-100 pt-4 first:border-0 first:pt-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-stone-900">{q.label}</p>
-                      <p className="text-xs text-stone-500">{q.source ? `source=${q.source} · ${q.scanCount} visits` : "No source tag"}</p>
-                    </div>
-                    {q.source && (
-                      <form action={deleteQrCode.bind(null, job.id, q.id)}>
-                        <button type="submit" className="text-xs text-red-700 hover:underline">
-                          Delete
-                        </button>
-                      </form>
-                    )}
-                  </div>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- generated data URL */}
-                  <img src={q.preview} alt={`QR code for ${q.label}`} width={160} height={160} className="mt-3 rounded border border-stone-200" />
-                  <p className="mt-2 break-all text-xs text-stone-600">{q.url}</p>
-                  <div className="mt-2 flex gap-3 text-sm">
-                    <a className="font-medium text-brand hover:underline" href={`/api/admin/jobs/${job.id}/qr?format=png&source=${encodeURIComponent(q.source)}`}>
-                      Download PNG
-                    </a>
-                    <a className="font-medium text-brand hover:underline" href={`/api/admin/jobs/${job.id}/qr?format=svg&source=${encodeURIComponent(q.source)}`}>
-                      Download SVG
-                    </a>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <QrCreateForm jobId={job.id} />
+            {job.status === "published" && (
+              <form action={changeJobStatus.bind(null, job.id, "draft")}>
+                <Button type="submit" variant="secondary" className="w-full">
+                  Unpublish
+                </Button>
+              </form>
+            )}
+            {job.status !== "closed" && (
+              <form action={changeJobStatus.bind(null, job.id, "closed")}>
+                <Button type="submit" variant="secondary" className="w-full">
+                  Close job
+                </Button>
+              </form>
+            )}
+            {job.status === "published" && (
+              <LinkButton href={`/jobs/${job.slug}`} target="_blank" variant="ghost" className="w-full">
+                View live page ↗
+              </LinkButton>
+            )}
+          </Card>
+
+          <Card className="space-y-2 p-5 text-sm">
+            <h2 className="font-semibold text-stone-900">Related</h2>
+            <Link href={`/admin/applications?job=${job.id}&status=all`} className="block text-brand hover:underline">
+              {applicationCount} application{applicationCount === 1 ? "" : "s"} →
+            </Link>
+            <Link href={`/admin/qr-codes?job=${job.id}`} className="block text-brand hover:underline">
+              {qrCount > 0 ? `${qrCount} QR code${qrCount === 1 ? "" : "s"} · create another →` : "Create a QR code for this job →"}
+            </Link>
           </Card>
         </aside>
       </div>

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { after } from "next/server";
-import { and, eq, sql } from "drizzle-orm";
-import { db, t } from "@/db";
 import { Icon } from "@/components/site/icons";
 import { SiteImage } from "@/components/site/site-image";
 import { normaliseSource } from "@/lib/qr";
@@ -67,17 +64,8 @@ export default async function JobPage({ params, searchParams }: PageProps<"/jobs
   if (!data) notFound();
   const { job, positions } = data;
 
-  // Source attribution from QR codes (?source=poster). Visit counting never blocks rendering.
+  // Source attribution (?source=poster, set by QR short links) is carried through to the application.
   const source = normaliseSource(typeof sp.source === "string" ? sp.source : "");
-  if (source) {
-    after(() =>
-      db
-        .update(t.jobQrCodes)
-        .set({ scanCount: sql`${t.jobQrCodes.scanCount} + 1` })
-        .where(and(eq(t.jobQrCodes.jobId, job.id), eq(t.jobQrCodes.source, source)))
-        .catch(() => undefined),
-    );
-  }
   const applyHref = `/jobs/${job.slug}/apply${source ? `?source=${source}` : ""}`;
 
   const facts = [

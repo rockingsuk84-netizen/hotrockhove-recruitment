@@ -31,7 +31,9 @@ export async function rateLimit(rule: RateLimitRule, identifier: string): Promis
     .onConflictDoUpdate({
       target: t.rateLimits.key,
       set: {
-        count: sql`CASE WHEN ${t.rateLimits.windowStart} = ${windowStart} THEN ${t.rateLimits.count} + 1 ELSE 1 END`,
+        // Raw SQL parameters bypass Drizzle's column encoding, and the postgres-js
+        // driver rejects Date objects there, so pass an ISO string with an explicit cast.
+        count: sql`CASE WHEN ${t.rateLimits.windowStart} = ${windowStart.toISOString()}::timestamptz THEN ${t.rateLimits.count} + 1 ELSE 1 END`,
         windowStart,
         expiresAt,
       },

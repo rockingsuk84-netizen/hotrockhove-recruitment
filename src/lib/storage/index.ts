@@ -31,6 +31,25 @@ export async function getActiveStorage(): Promise<StorageAdapter> {
 }
 
 /**
+ * Fetch a stored file's bytes on the server. Providers that hand out signed
+ * URLs are fetched here rather than redirecting the browser, so staff never
+ * receive expiring storage links (which fail when a browser extension or
+ * download manager re-requests them) and downloads keep their original name.
+ */
+export async function readStoredFile(
+  provider: StorageProviderName,
+  storageKey: string,
+  opts: { filename: string; contentType: string },
+): Promise<Buffer> {
+  const storage = await getStorageFor(provider);
+  const result = await storage.download(storageKey, opts);
+  if (result.kind === "body") return result.body;
+  const res = await fetch(result.url, { cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`Storage returned HTTP ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+/**
  * Adapter for an existing document. Documents stay readable from the provider
  * they were written to, even after the active provider changes.
  */

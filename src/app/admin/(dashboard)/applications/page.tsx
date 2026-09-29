@@ -112,7 +112,7 @@ export default async function ApplicationsPage({ searchParams }: PageProps<"/adm
                       </Link>
                     </td>
                     <td className="px-5 py-3 text-stone-700">
-                      {r.position && <span className="block font-medium">{r.position}</span>}
+                      {r.position && r.position !== r.jobTitle && <span className="block font-medium">{r.position}</span>}
                       <span className="text-stone-500">{r.jobTitle}</span>
                     </td>
                     <td className="px-5 py-3">

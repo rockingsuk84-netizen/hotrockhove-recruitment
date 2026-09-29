@@ -78,7 +78,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
             <span className="flex flex-wrap items-center gap-2">
               <Badge tone={APPLICATION_STATUS_TONE[a.status]}>{STATUS_LABELS[a.status]}</Badge>
               <span>
-                {row.position ? `${row.position} · ` : ""}
+                {row.position && row.position !== job.title ? `${row.position} · ` : ""}
                 <Link href={`/admin/jobs/${job.id}`} className="hover:underline">
                   {job.title}
                 </Link>
@@ -100,7 +100,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
             <dl className="mt-2 divide-y divide-stone-100">
               <Row label="Email">{a.email ? <a href={`mailto:${a.email}`} className="text-brand hover:underline">{a.email}</a> : "—"}</Row>
               <Row label="Phone">{a.phone ? <a href={`tel:${a.phone.replace(/\s/g, "")}`} className="text-brand hover:underline">{a.phone}</a> : "—"}</Row>
-              <Row label="Role">{row.position ?? "—"}</Row>
+              <Row label="Role">{row.position ?? job.title}</Row>
               <Row label={job.standoutPrompt}>{a.standoutQuality || "—"}</Row>
               {job.questions.map((q) => (
                 <Row key={q.id} label={q.label}>

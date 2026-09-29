@@ -64,7 +64,7 @@ async function main() {
   for (const [index, role] of ROLES.entries()) {
     const exists = await db.query.jobs.findFirst({ where: eq(t.jobs.slug, role.slug), columns: { id: true } });
     if (exists) continue;
-    await db
+    const [job] = await db
       .insert(t.jobs)
       .values({
         slug: role.slug,
@@ -86,7 +86,11 @@ async function main() {
         status: "published",
         // Staggered so listings follow the source order (earlier roles show first).
         publishedAt: new Date(Date.now() - index * 60_000),
-      });
+      })
+      .returning({ id: t.jobs.id });
+    // Each job is a single role; linking it records the role on every application.
+    const position = await db.query.positions.findFirst({ where: eq(t.positions.name, role.title), columns: { id: true } });
+    if (position) await db.insert(t.jobPositions).values({ jobId: job.id, positionId: position.id }).onConflictDoNothing();
     created++;
   }
   console.log(`Jobs: ${created} created, ${ROLES.length - created} already present.`);

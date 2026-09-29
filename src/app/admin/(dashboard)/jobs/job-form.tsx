@@ -121,7 +121,7 @@ export function JobForm({
           <legend className="mb-1.5 text-sm font-medium text-stone-800">
             Roles applicants can choose <span className="font-normal text-stone-500">(optional)</span>
           </legend>
-          <p className="mb-2 text-sm text-stone-500">If you select roles, applicants must pick one. Manage the list under Configuration → Lists.</p>
+          <p className="mb-2 text-sm text-stone-500">Select one role and it is recorded on every application automatically. Select several and applicants choose one. Manage the list under Configuration → Lists.</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {taxonomy.positions
               .filter((p) => p.active || initial.positionIds.includes(p.id))

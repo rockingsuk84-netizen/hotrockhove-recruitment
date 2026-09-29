@@ -73,7 +73,11 @@ export async function submitApplication(form: FormData): Promise<SubmitResult> {
       .from(t.jobPositions)
       .innerJoin(t.positions, eq(t.positions.id, t.jobPositions.positionId))
       .where(eq(t.jobPositions.jobId, job.id));
-    if (jobPositions.length > 0) {
+    if (jobPositions.length === 1) {
+      // Single-role job: the role is implied, so record it without asking the applicant.
+      parsed.data.positionId = jobPositions[0].id;
+      positionName = jobPositions[0].name;
+    } else if (jobPositions.length > 1) {
       const match = jobPositions.find((p) => p.id === parsed.data.positionId);
       if (!match) errors.positionId = "Please choose the role you are applying for.";
       positionName = match?.name ?? null;
@@ -229,7 +233,8 @@ export async function sendApplicationEmails(applicationId: string) {
   const site = await getSetting("site");
   const n = await getSetting("notifications");
   const a = row.application;
-  const jobTitle = row.positionName ? `${row.positionName} – ${row.jobTitle}` : row.jobTitle;
+  const role = row.positionName && row.positionName !== row.jobTitle ? row.positionName : null;
+  const jobTitle = role ? `${role} – ${row.jobTitle}` : row.jobTitle;
 
   if (n.sendApplicantConfirmation) {
     const msg = applicantConfirmationEmail(site, n, { applicantName: a.fullName, jobTitle });
@@ -243,7 +248,7 @@ export async function sendApplicationEmails(applicationId: string) {
     const msg = adminNewApplicationEmail(site, n, {
       applicantName: a.fullName,
       jobTitle: row.jobTitle,
-      position: row.positionName,
+      position: role,
       email: a.email,
       phone: a.phone,
       source: a.source,

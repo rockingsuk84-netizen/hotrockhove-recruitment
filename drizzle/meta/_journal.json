@@ -29,6 +29,13 @@
       "when": 1790630083031,
       "tag": "0003_drop_job_qr_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790658534269,
+      "tag": "0004_link_job_roles",
+      "breakpoints": true
     }
   ]
 }

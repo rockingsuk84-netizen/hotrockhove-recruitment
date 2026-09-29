@@ -93,7 +93,7 @@ export default async function AdminOverview({ searchParams }: PageProps<"/admin"
                   <div>
                     <p className="font-medium text-stone-900">{a.fullName}</p>
                     <p className="text-sm text-stone-600">
-                      {a.position ? `${a.position} · ` : ""}
+                      {a.position && a.position !== a.jobTitle ? `${a.position} · ` : ""}
                       {a.jobTitle}
                     </p>
                   </div>

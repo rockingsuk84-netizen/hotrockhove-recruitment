@@ -168,7 +168,7 @@ export function ApplyForm(props: Props) {
           <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
         </div>
 
-        {props.positions.length > 0 && (
+        {props.positions.length > 1 && (
           <Field label="Which role are you applying for?" htmlFor="positionId" required error={err("positionId")}>
             <Select id="positionId" name="positionId" required defaultValue="" aria-invalid={!!err("positionId")} aria-describedby={describedBy("positionId", errors)}>
               <option value="" disabled>

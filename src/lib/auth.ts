@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { db, t } from "@/db";
+import { audit } from "./audit";
 
 /**
  * Admin authentication (Better Auth, email + password, database sessions).
@@ -23,6 +24,13 @@ export const auth = betterAuth({
     disableSignUp: true,
     minPasswordLength: 12,
     maxPasswordLength: 128,
+    // Invite/reset links are created by services/staff-passwords.ts; this only
+    // governs Better Auth's own reset endpoint. Resetting signs out everywhere.
+    resetPasswordTokenExpiresIn: 60 * 60,
+    revokeSessionsOnPasswordReset: true,
+    onPasswordReset: async ({ user }) => {
+      await audit("auth.password_reset", { actorUserId: user.id, entityType: "user", entityId: user.id });
+    },
   },
   user: {
     additionalFields: {

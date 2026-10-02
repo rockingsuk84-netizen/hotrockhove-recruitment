@@ -1,20 +1,26 @@
 "use client";
 
 import { useActionState } from "react";
+import { submitWithoutReset } from "@/components/forms";
 import { Alert, Button, Input, Label, Select } from "@/components/ui";
 import { createStaff, type StaffState } from "./actions";
+import { CopyLink } from "./copy-link";
 
 export function CreateStaffForm({ canCreateOwner }: { canCreateOwner: boolean }) {
   const [state, action, pending] = useActionState<StaffState, FormData>(createStaff, {});
   return (
-    <form action={action} className="mt-4 space-y-3">
+    <form onSubmit={submitWithoutReset(action)} className="mt-4 space-y-3">
       {state.error && <Alert tone="error">{state.error}</Alert>}
-      {state.created && (
-        <Alert tone="success">
-          Account created for {state.created.email}. Temporary password (shown once):{" "}
-          <code className="select-all break-all rounded bg-white px-1 font-mono">{state.created.password}</code>
-        </Alert>
-      )}
+      {state.created &&
+        (state.created.delivered ? (
+          <Alert tone="success">Invitation sent to {state.created.email}. They&apos;ll choose their own password from the email (link valid for 72 hours).</Alert>
+        ) : (
+          <Alert tone="info">
+            Account created for {state.created.email}, but the invitation email couldn&apos;t be sent (email isn&apos;t set up yet). Send them this
+            one-time link securely; it expires in 72 hours:
+            {state.created.link && <CopyLink link={state.created.link} />}
+          </Alert>
+        ))}
       <div>
         <Label htmlFor="staff-name">Name</Label>
         <Input id="staff-name" name="name" required maxLength={100} />
@@ -32,8 +38,9 @@ export function CreateStaffForm({ canCreateOwner }: { canCreateOwner: boolean })
         </Select>
       </div>
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Creating…" : "Create account"}
+        {pending ? "Sending invitation…" : "Create and send invitation"}
       </Button>
+      <p className="text-xs text-stone-500">They&apos;ll receive an email to set their own password. You never see or handle it.</p>
     </form>
   );
 }

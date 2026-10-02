@@ -11,6 +11,9 @@ export const RATE_LIMITS = {
   /** Per email + job — stops the same person resubmitting in a loop. */
   applicationPerEmail: { name: "apply-email", limit: 3, windowSeconds: 60 * 60 },
   adminSignInPerIp: { name: "signin-ip", limit: 10, windowSeconds: 15 * 60 },
+  /** "Forgot password" requests, per IP and per email. */
+  passwordResetPerIp: { name: "reset-ip", limit: 10, windowSeconds: 60 * 60 },
+  passwordResetPerEmail: { name: "reset-email", limit: 3, windowSeconds: 60 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 export type RateLimitResult = { allowed: boolean; remaining: number; retryAfterSeconds: number };

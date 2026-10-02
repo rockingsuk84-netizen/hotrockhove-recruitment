@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format";
 import { requireAdmin } from "@/lib/session";
 import { setStaffActive } from "./actions";
 import { CreateStaffForm } from "./create-staff-form";
+import { ResetPasswordButton } from "./reset-button";
 
 export const metadata = { title: "Staff" };
 
@@ -14,7 +15,7 @@ export default async function StaffPage() {
 
   return (
     <>
-      <PageHeader title="Staff" description="Owners and admins manage configuration and staff. Recruiters manage jobs and applications." />
+      <PageHeader title="Staff" description="Owners and admins manage configuration and staff. Recruiters manage jobs and applications. New staff are emailed an invitation to set their own password." />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="overflow-hidden">
           <ul className="divide-y divide-stone-100">
@@ -32,11 +33,14 @@ export default async function StaffPage() {
                   <Badge tone={u.role === "recruiter" ? "neutral" : "violet"}>{u.role}</Badge>
                   {!u.active && <Badge tone="red">Deactivated</Badge>}
                   {u.id !== me.id && (u.role !== "owner" || me.role === "owner") && (
-                    <form action={setStaffActive.bind(null, u.id, !u.active)}>
-                      <button type="submit" className="text-sm font-medium text-brand hover:underline">
-                        {u.active ? "Deactivate" : "Reactivate"}
-                      </button>
-                    </form>
+                    <>
+                      {u.active && <ResetPasswordButton userId={u.id} name={u.name} />}
+                      <form action={setStaffActive.bind(null, u.id, !u.active)}>
+                        <button type="submit" className="text-sm font-medium text-brand hover:underline">
+                          {u.active ? "Deactivate" : "Reactivate"}
+                        </button>
+                      </form>
+                    </>
                   )}
                 </div>
               </li>

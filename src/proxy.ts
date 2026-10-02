@@ -13,7 +13,8 @@ import { buildCsp } from "@/lib/csp";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login" && !getSessionCookie(request)) {
+  const publicAdminPaths = ["/admin/login", "/admin/forgot-password", "/admin/reset-password"];
+  if (pathname.startsWith("/admin") && !publicAdminPaths.includes(pathname) && !getSessionCookie(request)) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.search = "";

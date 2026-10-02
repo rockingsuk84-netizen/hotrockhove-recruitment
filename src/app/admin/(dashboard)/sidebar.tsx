@@ -92,8 +92,12 @@ export function AdminSidebar({
 
   const footer = (
     <div className="border-t border-white/10 p-4 text-sm">
-      <p className="truncate font-medium text-white">{user.name}</p>
-      <p className="text-xs capitalize text-white/50">{user.role}</p>
+      <Link href="/admin/account" className="group block">
+        <p className="truncate font-medium text-white group-hover:underline">{user.name}</p>
+        <p className="text-xs text-white/50">
+          <span className="capitalize">{user.role}</span> · My account
+        </p>
+      </Link>
       <div className="mt-3 flex items-center justify-between gap-2">
         <Link href="/" target="_blank" className="inline-flex items-center gap-1.5 text-white/70 hover:text-white">
           <Icon name="external" className="h-4 w-4" /> View site

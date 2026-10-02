@@ -64,3 +64,32 @@ export function adminNewApplicationEmail(
     text: `A new application has been submitted.\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\nView application (sign-in required): ${vars.dashboardUrl}`,
   };
 }
+
+function button(site: SiteSettings, url: string, label: string) {
+  return `<p style="margin:22px 0"><a href="${esc(url)}" style="display:inline-block;background:${site.accentColour};color:#111;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:bold">${esc(label)}</a></p>`;
+}
+
+/** Invitation for a new staff member to set their own password. */
+export function staffInviteEmail(
+  site: SiteSettings,
+  vars: { name: string; inviterName: string; url: string; expiresHours: number },
+): RenderedEmail {
+  const intro = `Hello ${vars.name},\n\n${vars.inviterName} has added you to the ${site.brandName} recruitment dashboard. Set your password to get started.`;
+  const note = `This link works once and expires in ${vars.expiresHours} hours. If it has expired, ask an administrator to send a new one or use "Forgot password?" on the sign-in page.\n\nIf you weren't expecting this email, you can ignore it.`;
+  return {
+    subject: `You've been invited to the ${site.brandName} dashboard`,
+    html: layout(site, paragraphs(intro) + button(site, vars.url, "Set your password") + paragraphs(note), "Set your password to access the dashboard"),
+    text: `${intro}\n\nSet your password: ${vars.url}\n\n${note}`,
+  };
+}
+
+/** Password reset link for an existing staff member. */
+export function passwordResetEmail(site: SiteSettings, vars: { name: string; url: string; expiresMinutes: number }): RenderedEmail {
+  const intro = `Hello ${vars.name},\n\nWe received a request to reset the password for your ${site.brandName} dashboard account.`;
+  const note = `This link works once and expires in ${vars.expiresMinutes} minutes. Resetting your password signs you out on other devices.\n\nIf you didn't request this, you can ignore this email; your password won't change.`;
+  return {
+    subject: `Reset your ${site.brandName} dashboard password`,
+    html: layout(site, paragraphs(intro) + button(site, vars.url, "Choose a new password") + paragraphs(note), "Reset your dashboard password"),
+    text: `${intro}\n\nChoose a new password: ${vars.url}\n\n${note}`,
+  };
+}

@@ -4,7 +4,7 @@ import { and, desc, eq, inArray, isNull, TransactionRollbackError } from "drizzl
 import { db, t } from "@/db";
 import { audit } from "@/lib/audit";
 import { sha256 } from "@/lib/crypto";
-import { formRequestEmail, formResponseCopyEmail, offerEmail, sendEmail } from "@/lib/email";
+import { adminFormCompletedEmail, formRequestEmail, formResponseCopyEmail, offerEmail, sendEmail } from "@/lib/email";
 import { getTransport } from "@/lib/email/transport";
 import { env } from "@/lib/env";
 import { safeDisplayFilename, validateCv } from "@/lib/files";
@@ -426,6 +426,37 @@ export async function sendFormResponseCopy(requestId: string) {
   await sendEmail(
     { to: [row.applicant.email], ...msg, replyTo: site.contactEmail || undefined },
     { template: "applicant.form_response_copy", applicationId: row.request.applicationId ?? undefined, recipientApplicantId: row.applicant.id },
+  );
+}
+
+/** Tell the configured admin recipients that a form was completed. Runs after the response is sent. */
+export async function sendFormCompletedAlert(requestId: string) {
+  const n = await getSetting("notifications");
+  if (!n.sendAdminFormAlerts || n.adminRecipients.length === 0) return;
+  const [row] = await db
+    .select({ request: t.formRequests, applicantName: t.applicants.fullName, jobTitle: t.jobs.title, positionName: t.positions.name })
+    .from(t.formRequests)
+    .innerJoin(t.applicants, eq(t.applicants.id, t.formRequests.applicantId))
+    .leftJoin(t.applications, eq(t.applications.id, t.formRequests.applicationId))
+    .leftJoin(t.jobs, eq(t.jobs.id, t.applications.jobId))
+    .leftJoin(t.positions, eq(t.positions.id, t.applications.positionId))
+    .where(eq(t.formRequests.id, requestId))
+    .limit(1);
+  if (!row || row.request.status !== "completed") return;
+
+  const site = await getSetting("site");
+  const def = row.request.definition;
+  const hasCvField = def.fields.some((f) => f.type === "cv_upload");
+  const msg = adminFormCompletedEmail(site, {
+    applicantName: row.applicantName,
+    formTitle: def.title,
+    jobTitle: row.positionName ?? row.jobTitle,
+    cvNote: hasCvField ? (row.request.cvDocumentId ? "New CV uploaded" : "Already on file") : null,
+    dashboardUrl: new URL(`/admin/forms/responses/${requestId}`, env().APP_URL).toString(),
+  });
+  await sendEmail(
+    { to: n.adminRecipients, ...msg },
+    { template: "admin.form_completed", applicationId: row.request.applicationId ?? undefined },
   );
 }
 

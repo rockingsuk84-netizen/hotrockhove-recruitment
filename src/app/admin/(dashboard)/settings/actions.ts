@@ -95,6 +95,7 @@ export async function saveNotificationSettings(_: SettingsState, fd: FormData): 
       .filter(Boolean),
     sendApplicantConfirmation: fd.get("sendApplicantConfirmation") === "on",
     sendAdminNotification: fd.get("sendAdminNotification") === "on",
+    sendAdminFormAlerts: fd.get("sendAdminFormAlerts") === "on",
     applicantConfirmationSubject: str(fd, "applicantConfirmationSubject"),
     applicantConfirmationBody: str(fd, "applicantConfirmationBody"),
     adminNotificationSubject: str(fd, "adminNotificationSubject"),

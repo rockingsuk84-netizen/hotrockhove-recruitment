@@ -17,13 +17,17 @@ export default async function NotificationSettingsPage() {
         </p>
       )}
       <ActionForm action={saveNotificationSettings}>
-        <Field label="Admin notification recipients" htmlFor="adminRecipients" hint="One email address per line. Each receives an alert for every new application.">
+        <Field label="Admin notification recipients" htmlFor="adminRecipients" hint="One email address per line. Each receives the alerts switched on below.">
           <Textarea id="adminRecipients" name="adminRecipients" defaultValue={n.adminRecipients.join("\n")} rows={3} />
         </Field>
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm text-stone-800">
             <input type="checkbox" name="sendAdminNotification" defaultChecked={n.sendAdminNotification} className="h-4 w-4 accent-brand" />
             Send new-application alerts to admins
+          </label>
+          <label className="flex items-center gap-2 text-sm text-stone-800">
+            <input type="checkbox" name="sendAdminFormAlerts" defaultChecked={n.sendAdminFormAlerts} className="h-4 w-4 accent-brand" />
+            Email admins when an applicant completes a form
           </label>
           <label className="flex items-center gap-2 text-sm text-stone-800">
             <input type="checkbox" name="sendApplicantConfirmation" defaultChecked={n.sendApplicantConfirmation} className="h-4 w-4 accent-brand" />

@@ -22,6 +22,7 @@ const EMAIL_LABELS: Record<string, string> = {
   "applicant.interview_updated": "Interview updated",
   "applicant.interview_cancelled": "Interview cancelled",
   "applicant.offer": "Job offer",
+  "admin.form_completed": "Admin alert: form completed",
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

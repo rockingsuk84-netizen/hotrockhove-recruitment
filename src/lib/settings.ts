@@ -59,6 +59,8 @@ export const notificationSettingsSchema = z.object({
   adminRecipients: z.array(z.string().trim().email()).max(20),
   sendApplicantConfirmation: z.boolean(),
   sendAdminNotification: z.boolean(),
+  /** Alert the same recipients when an applicant completes a form. */
+  sendAdminFormAlerts: z.boolean(),
   applicantConfirmationSubject: z.string().trim().min(1).max(200),
   applicantConfirmationBody: z.string().trim().min(1).max(4000),
   adminNotificationSubject: z.string().trim().min(1).max(200),
@@ -158,6 +160,7 @@ const DEFAULTS: { [K in keyof typeof SCHEMAS]: z.infer<(typeof SCHEMAS)[K]> } = 
     adminRecipients: [],
     sendApplicantConfirmation: true,
     sendAdminNotification: true,
+    sendAdminFormAlerts: true,
     applicantConfirmationSubject: "We've received your application for {{jobTitle}}",
     applicantConfirmationBody:
       "Hello {{applicantName}},\n\nThank you for applying for {{jobTitle}} with {{brandName}}. We've received your application and CV.\n\nOur team reviews every application carefully. If your experience is a good match, we'll be in touch to arrange the next step.\n\nKind regards,\nThe {{brandName}} team",

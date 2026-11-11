@@ -2,7 +2,7 @@ import { after, NextResponse } from "next/server";
 import { audit, clientIp } from "@/lib/audit";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { getSetting } from "@/lib/settings";
-import { sendFormResponseCopy, submitFormResponse } from "@/services/forms";
+import { sendFormCompletedAlert, sendFormResponseCopy, submitFormResponse } from "@/services/forms";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +48,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/forms/[toke
     const result = await submitFormResponse(token, form);
     if (!result.ok) return json(result.status, { ok: false, error: result.error, fields: result.fields ?? {} });
     const id = result.requestId;
-    after(() => sendFormResponseCopy(id).catch((e) => console.error("[forms] copy email failed:", (e as Error).message)));
+    after(async () => {
+      await sendFormResponseCopy(id).catch((e) => console.error("[forms] copy email failed:", (e as Error).message));
+      await sendFormCompletedAlert(id).catch((e) => console.error("[forms] admin alert failed:", (e as Error).message));
+    });
     return json(200, { ok: true });
   } catch (err) {
     console.error("[forms] submission failed:", (err as Error).message);

@@ -193,3 +193,26 @@ export function offerEmail(site: SiteSettings, vars: { applicantName: string; jo
     text: `${intro}${vars.message ? `\n\n${vars.message}` : ""}\n\n${outro}`,
   };
 }
+
+/** Alert to admins that an applicant completed a form. Answers stay in the dashboard. */
+export function adminFormCompletedEmail(
+  site: SiteSettings,
+  vars: { applicantName: string; formTitle: string; jobTitle: string | null; cvNote: string | null; dashboardUrl: string },
+): RenderedEmail {
+  const rows: [string, string][] = [
+    ["Applicant", vars.applicantName],
+    ["Form", vars.formTitle],
+    ["Applied for", vars.jobTitle ?? "Not applied (sent directly)"],
+    ...(vars.cvNote ? ([["CV", vars.cvNote]] as [string, string][]) : []),
+  ];
+  const btn = `<a href="${esc(vars.dashboardUrl)}" style="display:inline-block;background:${site.accentColour};color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:bold">View answers</a>`;
+  return {
+    subject: `Form completed: ${vars.applicantName} – ${vars.formTitle}`,
+    html: layout(
+      site,
+      `<p style="margin:0 0 14px">An applicant has completed a form.</p>${detailTable(rows)}${btn}<p style="margin:18px 0 0;font-size:12px;color:#78716c">Sign-in is required. The answers are only available from the dashboard.</p>`,
+      `${vars.applicantName} completed ${vars.formTitle}`,
+    ),
+    text: `An applicant has completed a form.\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\nView answers (sign-in required): ${vars.dashboardUrl}`,
+  };
+}

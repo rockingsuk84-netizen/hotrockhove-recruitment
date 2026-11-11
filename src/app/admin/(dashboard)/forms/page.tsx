@@ -59,7 +59,10 @@ export default async function FormsPage() {
                     <td className="px-5 py-3 text-stone-700">{f.waiting}</td>
                     <td className="px-5 py-3 text-stone-700">{f.completed}</td>
                     <td className="whitespace-nowrap px-5 py-3 text-stone-600">{formatDate(f.updatedAt)}</td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="space-x-2 whitespace-nowrap px-5 py-3 text-right">
+                      <LinkButton href={`/admin/forms/${f.id}/preview`} variant="ghost" className="py-1.5">
+                        Preview
+                      </LinkButton>
                       {f.status === "active" && (
                         <LinkButton href={`/admin/forms/${f.id}/send`} variant="secondary" className="py-1.5">
                           Send

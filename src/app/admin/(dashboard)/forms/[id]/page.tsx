@@ -73,7 +73,14 @@ export default async function FormPage({ params, searchParams }: PageProps<"/adm
         <PageHeader
           title={form.title}
           description={form.definition.intro}
-          actions={form.status === "active" && <LinkButton href={`/admin/forms/${id}/send`}>Send to applicants</LinkButton>}
+          actions={
+            <>
+              <LinkButton href={`/admin/forms/${id}/preview`} variant="secondary">
+                Preview
+              </LinkButton>
+              {form.status === "active" && <LinkButton href={`/admin/forms/${id}/send`}>Send to applicants</LinkButton>}
+            </>
+          }
         />
       </div>
 

@@ -21,6 +21,8 @@ type Props = {
   maxCvBytes: number;
   allowedCvTypes: string[];
   accept: string;
+  /** Staff preview: everything works except submitting, which saves and sends nothing. */
+  preview?: boolean;
 };
 
 const choiceBox = "h-5 w-5 shrink-0 rounded border-stone-400 accent-forest";
@@ -81,6 +83,11 @@ export function FormRenderer(props: Props) {
     e.preventDefault();
     if (submitting) return;
     setFormError(null);
+    if (props.preview) {
+      setFormError("This is a preview. Nothing was saved or sent.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const data = new FormData(e.currentTarget);
 
     // Friendly checks only; the server validates everything again.
@@ -304,7 +311,7 @@ export function FormRenderer(props: Props) {
     >
       {formError && (
         <div id="form-error">
-          <Alert tone="error">{formError}</Alert>
+          <Alert tone={props.preview ? "info" : "error"}>{formError}</Alert>
         </div>
       )}
       {props.definition.fields.filter((f) => isShown(f, controls)).map(render)}

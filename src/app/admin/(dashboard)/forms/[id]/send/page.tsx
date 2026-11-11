@@ -4,7 +4,7 @@ import { and, desc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db, t } from "@/db";
 import { APPLICATION_STATUSES, type ApplicationStatus } from "@/db/schema";
-import { Alert, APPLICATION_STATUS_TONE, Badge, Button, Card, PageHeader, Select } from "@/components/ui";
+import { Alert, APPLICATION_STATUS_TONE, Badge, Button, Card, LinkButton, PageHeader, Select } from "@/components/ui";
 import { formatDate, STATUS_LABELS } from "@/lib/format";
 import { requireStaff } from "@/lib/session";
 import { applicantsWithCv, MAX_RECIPIENTS_PER_SEND } from "@/services/forms";
@@ -84,6 +84,11 @@ export default async function SendFormPage({ params, searchParams }: PageProps<"
         <PageHeader
           title={`Send “${form.title}”`}
           description="Each applicant gets an email with a private link. Someone who applied for more than one job gets the form once."
+          actions={
+            <LinkButton href={`/admin/forms/${id}/preview`} variant="secondary">
+              Preview the form
+            </LinkButton>
+          }
         />
       </div>
 

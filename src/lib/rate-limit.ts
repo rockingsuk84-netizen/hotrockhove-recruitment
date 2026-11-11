@@ -10,6 +10,8 @@ export const RATE_LIMITS = {
   applicationPerIp: { name: "apply-ip", limit: 30, windowSeconds: 60 * 60 },
   /** Per email + job — stops the same person resubmitting in a loop. */
   applicationPerEmail: { name: "apply-email", limit: 3, windowSeconds: 60 * 60 },
+  /** Completed applicant forms, per IP (links are private, so this only curbs abuse). */
+  formSubmitPerIp: { name: "form-ip", limit: 30, windowSeconds: 60 * 60 },
   adminSignInPerIp: { name: "signin-ip", limit: 10, windowSeconds: 15 * 60 },
   /** "Forgot password" requests, per IP and per email. */
   passwordResetPerIp: { name: "reset-ip", limit: 10, windowSeconds: 60 * 60 },

@@ -21,6 +21,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { Answers, FormDefinition } from "../lib/forms/definition";
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -372,6 +373,112 @@ export const documents = pgTable(
   (t) => [
     index("documents_applicant_idx").on(t.applicantId),
     index("documents_application_idx").on(t.applicationId),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
+/* Applicant forms (sent by staff, completed through a private link)          */
+/* -------------------------------------------------------------------------- */
+
+export const formStatus = pgEnum("form_status", ["active", "archived"]);
+export const formRequestStatus = pgEnum("form_request_status", ["sent", "completed", "cancelled"]);
+export type FormRequestStatus = (typeof formRequestStatus.enumValues)[number];
+
+/** A reusable form. `definition` is validated by formDefinitionSchema (src/lib/forms/definition.ts). */
+export const forms = pgTable(
+  "forms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    definition: jsonb("definition").$type<FormDefinition>().notNull(),
+    status: formStatus("status").notNull().default("active"),
+    createdById: text("created_by_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("forms_status_idx").on(t.status)],
+);
+
+/**
+ * One form sent to one applicant, and their response. The link token is
+ * stored only as a SHA-256 hash. The definition is copied at send time so
+ * later edits to the form never change what an applicant was asked.
+ */
+export const formRequests = pgTable(
+  "form_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "restrict" }),
+    applicantId: uuid("applicant_id")
+      .notNull()
+      .references(() => applicants.id, { onDelete: "cascade" }),
+    /** The application the form was sent from (context for staff). */
+    applicationId: uuid("application_id").references(() => applications.id, { onDelete: "set null" }),
+    definition: jsonb("definition").$type<FormDefinition>().notNull(),
+    tokenHash: text("token_hash").notNull(),
+    status: formRequestStatus("status").notNull().default("sent"),
+    emailStatus: notificationStatus("email_status").notNull().default("queued"),
+    sentById: text("sent_by_id").references(() => users.id, { onDelete: "set null" }),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    answers: jsonb("answers").$type<Answers>().notNull().default({}),
+    /** CV uploaded with this response, if any. */
+    cvDocumentId: uuid("cv_document_id").references(() => documents.id, { onDelete: "set null" }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    /** Staff-only review: one of the definition's reviewOptions. */
+    decision: text("decision"),
+    decisionNote: text("decision_note"),
+    decidedById: text("decided_by_id").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** When the offer email was last sent (only "Offer" emails the applicant; Hold and Reject never do). */
+    offerEmailedAt: timestamp("offer_emailed_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("form_requests_token_uq").on(t.tokenHash),
+    index("form_requests_form_idx").on(t.formId),
+    index("form_requests_applicant_idx").on(t.applicantId),
+  ],
+);
+
+export const interviewMode = pgEnum("interview_mode", ["in_person", "online", "phone"]);
+export const interviewStatus = pgEnum("interview_status", ["scheduled", "cancelled"]);
+export type InterviewMode = (typeof interviewMode.enumValues)[number];
+
+/**
+ * An interview invitation. Rescheduling cancels the old row and creates a new
+ * one, so the history of what each applicant was told is kept.
+ */
+export const interviews = pgTable(
+  "interviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    applicantId: uuid("applicant_id")
+      .notNull()
+      .references(() => applicants.id, { onDelete: "cascade" }),
+    applicationId: uuid("application_id").references(() => applications.id, { onDelete: "set null" }),
+    formRequestId: uuid("form_request_id").references(() => formRequests.id, { onDelete: "set null" }),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    durationMinutes: integer("duration_minutes").notNull(),
+    mode: interviewMode("mode").notNull(),
+    /** Address for in-person interviews. */
+    location: text("location"),
+    /** https:// link for online interviews. */
+    meetingLink: text("meeting_link"),
+    /** Who the applicant will meet or should ask for. */
+    contactName: text("contact_name"),
+    /** Extra instructions shown in the email (what to bring, parking…). */
+    notes: text("notes"),
+    status: interviewStatus("status").notNull().default("scheduled"),
+    emailStatus: notificationStatus("email_status").notNull().default("queued"),
+    invitedById: text("invited_by_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("interviews_applicant_idx").on(t.applicantId),
+    index("interviews_form_request_idx").on(t.formRequestId),
+    index("interviews_scheduled_idx").on(t.scheduledAt),
   ],
 );
 

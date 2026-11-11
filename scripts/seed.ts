@@ -8,6 +8,7 @@
 import { eq } from "drizzle-orm";
 import { createDb } from "../src/db/client";
 import * as t from "../src/db/schema";
+import { AVAILABILITY_FORM, AVAILABILITY_FORM_ID } from "../src/lib/forms/templates";
 import { BENEFITS, DEPARTMENTS, DESCRIPTION, HOMEPAGE, QUALITIES, ROLES, STANDOUT_PROMPT, type Dept } from "./seed-data/hove/content";
 
 const db = createDb(process.env.DATABASE_URL);
@@ -94,6 +95,14 @@ async function main() {
     created++;
   }
   console.log(`Jobs: ${created} created, ${ROLES.length - created} already present.`);
+
+  // The first applicant form (the venue's paper availability form). Written once; admin edits survive.
+  const [form] = await db
+    .insert(t.forms)
+    .values({ id: AVAILABILITY_FORM_ID, title: AVAILABILITY_FORM.title, definition: AVAILABILITY_FORM })
+    .onConflictDoNothing()
+    .returning({ id: t.forms.id });
+  console.log(`Forms: ${form ? "availability form created" : "availability form already present"}.`);
 
   // Initial settings (only written if absent, so admin edits are never overwritten).
   const initial: Record<string, unknown> = {

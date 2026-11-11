@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, isNull, lt, notExists } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
 import { db, t } from "@/db";
 import { getStorageFor } from "@/lib/storage";
 
@@ -40,6 +40,19 @@ export async function eraseApplicant(applicantId: string) {
       await tx.delete(t.applicationNotes).where(inArray(t.applicationNotes.applicationId, appIds));
       await tx.update(t.notifications).set({ recipientAddress: null, subject: null }).where(inArray(t.notifications.applicationId, appIds));
     }
+    // Form responses: drop the answers and notes, and kill any outstanding link.
+    await tx
+      .update(t.formRequests)
+      .set({ answers: {}, decisionNote: null, tokenHash: sql`'erased-' || ${t.formRequests.id}::text` })
+      .where(eq(t.formRequests.applicantId, applicantId));
+    await tx
+      .update(t.formRequests)
+      .set({ status: "cancelled" })
+      .where(and(eq(t.formRequests.applicantId, applicantId), eq(t.formRequests.status, "sent")));
+    await tx
+      .update(t.interviews)
+      .set({ status: "cancelled", notes: null })
+      .where(eq(t.interviews.applicantId, applicantId));
     await tx
       .update(t.applicants)
       .set({ fullName: "Erased applicant", email: `erased-${applicantId}@invalid`, phone: "", erasedAt: now })

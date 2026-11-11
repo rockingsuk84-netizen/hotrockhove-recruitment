@@ -13,6 +13,17 @@ import { NoteForm } from "./note-form";
 
 export const metadata = { title: "Application" };
 
+const EMAIL_LABELS: Record<string, string> = {
+  "admin.new_application": "Admin alert",
+  "applicant.application_received": "Applicant confirmation",
+  "applicant.form_request": "Form sent",
+  "applicant.form_response_copy": "Copy of form answers",
+  "applicant.interview_invite": "Interview invitation",
+  "applicant.interview_updated": "Interview updated",
+  "applicant.interview_cancelled": "Interview cancelled",
+  "applicant.offer": "Job offer",
+};
+
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1 py-3 sm:grid-cols-[180px_1fr]">
@@ -39,7 +50,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
   if (!row) notFound();
   const { application: a, job, applicant } = row;
 
-  const [documents, notes, otherApplications, emails] = await Promise.all([
+  const [documents, notes, otherApplications, emails, formRequests] = await Promise.all([
     db
       .select()
       .from(t.documents)
@@ -62,6 +73,12 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
       .from(t.notifications)
       .where(eq(t.notifications.applicationId, id))
       .orderBy(desc(t.notifications.createdAt)),
+    db
+      .select({ id: t.formRequests.id, formId: t.formRequests.formId, status: t.formRequests.status, decision: t.formRequests.decision, sentAt: t.formRequests.sentAt, title: t.forms.title })
+      .from(t.formRequests)
+      .innerJoin(t.forms, eq(t.forms.id, t.formRequests.formId))
+      .where(eq(t.formRequests.applicantId, applicant.id))
+      .orderBy(desc(t.formRequests.sentAt)),
   ]);
 
   const erased = Boolean(applicant.erasedAt);
@@ -183,6 +200,33 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
             <p className="mt-2 text-xs text-stone-500">Last changed {formatDateTime(a.statusChangedAt)}</p>
           </Card>
 
+          {formRequests.length > 0 && (
+            <Card className="p-5">
+              <h2 className="font-semibold text-stone-900">Forms</h2>
+              <ul className="mt-3 space-y-2 text-sm">
+                {formRequests.map((f) => (
+                  <li key={f.id} className="flex flex-wrap items-center justify-between gap-2">
+                    {f.status === "completed" ? (
+                      <Link href={`/admin/forms/responses/${f.id}`} className="text-brand hover:underline">
+                        {f.title}
+                      </Link>
+                    ) : (
+                      <Link href={`/admin/forms/${f.formId}`} className="text-stone-700 hover:underline">
+                        {f.title}
+                      </Link>
+                    )}
+                    <span className="flex gap-1">
+                      {f.decision && <Badge tone={f.decision === "Offer" ? "green" : f.decision === "Reject" ? "red" : "amber"}>{f.decision}</Badge>}
+                      <Badge tone={f.status === "completed" ? "green" : f.status === "sent" ? "amber" : "neutral"}>
+                        {f.status === "completed" ? "Completed" : f.status === "sent" ? "Waiting" : "Cancelled"}
+                      </Badge>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           {otherApplications.length > 0 && (
             <Card className="p-5">
               <h2 className="font-semibold text-stone-900">Other applications</h2>
@@ -207,7 +251,7 @@ export default async function ApplicationPage({ params, searchParams }: PageProp
               <ul className="mt-3 space-y-2 text-sm">
                 {emails.map((e) => (
                   <li key={e.id} className="flex justify-between gap-2">
-                    <span className="text-stone-700">{e.template === "admin.new_application" ? "Admin alert" : "Applicant confirmation"}</span>
+                    <span className="text-stone-700">{EMAIL_LABELS[e.template] ?? e.template}</span>
                     <Badge tone={e.status === "sent" ? "green" : e.status === "failed" ? "red" : "neutral"}>{e.status}</Badge>
                   </li>
                 ))}

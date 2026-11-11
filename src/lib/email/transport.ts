@@ -29,11 +29,20 @@ function resendTransport(apiKey: string): EmailTransport {
   };
 }
 
-/** Development fallback: logs that an email would be sent, without the body. */
+/**
+ * Development fallback: logs that an email would be sent, without the body.
+ * EMAIL_CONSOLE_BODY=true also prints the plain-text body (including links) so
+ * flows such as applicant forms can be tested locally. Never used in production.
+ */
 const consoleTransport: EmailTransport = {
   name: "console",
   async send(msg) {
     console.info(`[email:console] "${msg.subject}" → ${msg.to.length} recipient(s). Set RESEND_API_KEY to deliver.`);
+    if (process.env.EMAIL_CONSOLE_BODY === "true" && env().NODE_ENV === "development") {
+      console.info(`[email:console] body:
+${msg.text}
+[email:console] end`);
+    }
     return { ok: true, id: null };
   },
 };

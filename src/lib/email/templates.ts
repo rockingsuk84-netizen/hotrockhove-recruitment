@@ -93,3 +93,103 @@ export function passwordResetEmail(site: SiteSettings, vars: { name: string; url
     text: `${intro}\n\nChoose a new password: ${vars.url}\n\n${note}`,
   };
 }
+
+/** A form for an applicant to complete, with their private link. */
+export function formRequestEmail(
+  site: SiteSettings,
+  vars: { applicantName: string; formTitle: string; intro: string; url: string; expiresOn: string },
+): RenderedEmail {
+  const intro = `Hello ${vars.applicantName},\n\nThank you for applying to ${site.brandName}. Please complete our short form: ${vars.formTitle}.${vars.intro ? `\n\n${vars.intro}` : ""}`;
+  const note = `This link is personal to you, so please don't share it. It can be used once and works until ${vars.expiresOn}.`;
+  return {
+    subject: `${site.brandName}: please complete "${vars.formTitle}"`,
+    html: layout(site, paragraphs(intro) + button(site, vars.url, "Complete the form") + paragraphs(note), `Please complete: ${vars.formTitle}`),
+    text: `${intro}\n\nComplete the form: ${vars.url}\n\n${note}`,
+  };
+}
+
+/** A copy of what the applicant submitted, for their records. */
+export function formResponseCopyEmail(
+  site: SiteSettings,
+  vars: { applicantName: string; formTitle: string; rows: { question: string; answer: string }[]; cvNote: string | null },
+): RenderedEmail {
+  const intro = `Hello ${vars.applicantName},\n\nThank you for completing "${vars.formTitle}". Here is a copy of your answers for your records.`;
+  const outro = `If anything is wrong, just reply to this email and let us know.`;
+  const all = vars.cvNote ? [...vars.rows, { question: "CV", answer: vars.cvNote }] : vars.rows;
+  const table = `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 18px;font-size:14px;border-collapse:collapse">${all
+    .map(
+      (r) =>
+        `<tr><td style="padding:8px 12px 8px 0;color:#78716c;vertical-align:top;border-top:1px solid #e7e5e4;width:45%">${esc(r.question)}</td><td style="padding:8px 0;vertical-align:top;border-top:1px solid #e7e5e4">${esc(r.answer).replace(/\n/g, "<br>")}</td></tr>`,
+    )
+    .join("")}</table>`;
+  return {
+    subject: `Your answers: ${vars.formTitle}`,
+    html: layout(site, paragraphs(intro) + table + paragraphs(outro), `Copy of your answers: ${vars.formTitle}`),
+    text: `${intro}\n\n${all.map((r) => `${r.question}\n${r.answer}`).join("\n\n")}\n\n${outro}`,
+  };
+}
+
+function detailTable(rows: [string, string][]) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 18px;font-size:15px;border-collapse:collapse">${rows
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:8px 12px 8px 0;color:#78716c;vertical-align:top;border-top:1px solid #e7e5e4;width:30%">${esc(k)}</td><td style="padding:8px 0;vertical-align:top;border-top:1px solid #e7e5e4">${esc(v).replace(/\n/g, "<br>")}</td></tr>`,
+    )
+    .join("")}</table>`;
+}
+
+/** Interview invitation, or an update when it has been rescheduled. */
+export function interviewInviteEmail(
+  site: SiteSettings,
+  vars: {
+    applicantName: string;
+    jobTitle: string | null;
+    when: string;
+    durationMinutes: number;
+    mode: "in_person" | "online" | "phone";
+    location: string | null;
+    meetingLink: string | null;
+    phone: string | null;
+    contactName: string | null;
+    notes: string | null;
+    updated: boolean;
+  },
+): RenderedEmail {
+  const role = vars.jobTitle ? ` for the ${vars.jobTitle} role` : "";
+  const intro = vars.updated
+    ? `Hello ${vars.applicantName},\n\nYour interview${role} at ${site.brandName} has changed. Here are the updated details. Please ignore any earlier times we sent.`
+    : `Hello ${vars.applicantName},\n\nThank you for completing our form. We'd like to invite you to an interview${role} at ${site.brandName}.`;
+  const rows: [string, string][] = [
+    ["When", `${vars.when} (UK time)`],
+    ["Length", `About ${vars.durationMinutes} minutes`],
+  ];
+  if (vars.mode === "in_person") rows.push(["Where", vars.location ?? ""]);
+  if (vars.mode === "online") rows.push(["How", "Online video call (link below)"]);
+  if (vars.mode === "phone") rows.push(["How", vars.phone ? `We'll phone you on ${vars.phone}` : "We'll phone you"]);
+  if (vars.contactName) rows.push([vars.mode === "in_person" ? "Ask for" : "With", vars.contactName]);
+  if (vars.notes) rows.push(["Notes", vars.notes]);
+  const join = vars.mode === "online" && vars.meetingLink ? button(site, vars.meetingLink, "Join the interview") : "";
+  const outro = `If you can't make this time, please reply to this email and we'll find another.`;
+  return {
+    subject: vars.updated ? `Updated interview details: ${site.brandName}` : `Interview invitation: ${site.brandName}`,
+    html: layout(site, paragraphs(intro) + detailTable(rows) + join + paragraphs(outro), `Interview: ${vars.when}`),
+    text: `${intro}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}${vars.mode === "online" && vars.meetingLink ? `\nJoin: ${vars.meetingLink}` : ""}\n\n${outro}`,
+  };
+}
+
+export function interviewCancelledEmail(site: SiteSettings, vars: { applicantName: string; when: string }): RenderedEmail {
+  const body = `Hello ${vars.applicantName},\n\nWe've had to cancel your interview with ${site.brandName} on ${vars.when}. We're sorry for any inconvenience.\n\nWe'll be in touch if we arrange another time. If you have any questions, just reply to this email.`;
+  return { subject: `Interview cancelled: ${site.brandName}`, html: layout(site, paragraphs(body), "Your interview has been cancelled"), text: body };
+}
+
+/** Job offer. Only sent for "Offer"; applicants on hold or rejected are not emailed. */
+export function offerEmail(site: SiteSettings, vars: { applicantName: string; jobTitle: string | null; message: string | null }): RenderedEmail {
+  const role = vars.jobTitle ? ` the ${vars.jobTitle} role` : " a role";
+  const intro = `Hello ${vars.applicantName},\n\nGreat news: we're delighted to offer you${role} at ${site.brandName}. Thank you for taking the time to meet us.`;
+  const outro = `Please reply to this email to accept or if you have any questions. We look forward to welcoming you to the team.`;
+  return {
+    subject: `Job offer from ${site.brandName}`,
+    html: layout(site, paragraphs(intro) + (vars.message ? paragraphs(vars.message) : "") + paragraphs(outro), `We'd like to offer you${role}`),
+    text: `${intro}${vars.message ? `\n\n${vars.message}` : ""}\n\n${outro}`,
+  };
+}

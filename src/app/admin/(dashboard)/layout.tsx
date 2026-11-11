@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
     { href: "/admin", label: "Overview", icon: "grid" },
     { href: "/admin/jobs", label: "Jobs", icon: "briefcase" },
     { href: "/admin/applications", label: "Applications", icon: "inbox" },
+    { href: "/admin/forms", label: "Forms", icon: "mail" },
     { href: "/admin/qr-codes", label: "QR codes", icon: "qr" },
     ...(canManageSettings(user)
       ? [

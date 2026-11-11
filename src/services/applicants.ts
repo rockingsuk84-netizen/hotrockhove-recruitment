@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, isNull, lt, notExists, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, notExists, sql } from "drizzle-orm";
 import { db, t } from "@/db";
 import { getStorageFor } from "@/lib/storage";
 
@@ -63,7 +63,8 @@ export async function eraseApplicant(applicantId: string) {
 }
 
 /**
- * Applicants whose most recent application is older than the retention period.
+ * Applicants whose most recent application (or, if they never applied, whose
+ * record) is older than the retention period.
  * Anyone with a "hired" application is excluded — they move into employment records.
  */
 export async function findApplicantsPastRetention(retentionDays: number, limit = 100) {
@@ -74,7 +75,8 @@ export async function findApplicantsPastRetention(retentionDays: number, limit =
     .where(
       and(
         isNull(t.applicants.erasedAt),
-        lt(t.applicants.lastAppliedAt, cutoff),
+        // People sent a form without applying have no application date; use when they were added.
+        sql`coalesce(${t.applicants.lastAppliedAt}, ${t.applicants.createdAt}) < ${cutoff.toISOString()}::timestamptz`,
         notExists(
           db
             .select({ id: t.applications.id })

@@ -3,9 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireStaff } from "@/lib/session";
+import { audit } from "@/lib/audit";
+import { requireAdmin, requireStaff } from "@/lib/session";
+import { eraseApplicant } from "@/services/applicants";
 import { interviewDetailsSchema, parseInterviewTime } from "@/lib/interviews";
-import { cancelFormRequest, MAX_RECIPIENTS_PER_SEND, recordFormDecision, resendFormRequest, sendFormToApplications } from "@/services/forms";
+import {
+  cancelFormRequest,
+  directRecipientSchema,
+  MAX_RECIPIENTS_PER_SEND,
+  recordFormDecision,
+  resendFormRequest,
+  sendFormToApplications,
+  sendFormToPerson,
+} from "@/services/forms";
 import { cancelInterview, scheduleInterviews } from "@/services/interviews";
 
 const uuid = z.string().uuid();
@@ -25,6 +35,29 @@ export async function sendFormAction(formId: string, _: SendFormState, fd: FormD
     failed: String(result.failed),
     skipped: String(result.skippedAlreadySent),
   });
+  redirect(`/admin/forms/${formId}?${qs}`);
+}
+
+export type DirectSendState = { error?: string; fields?: Record<string, string> };
+
+export async function sendFormToPersonAction(formId: string, _: DirectSendState, fd: FormData): Promise<DirectSendState> {
+  const user = await requireStaff();
+  if (!uuid.safeParse(formId).success) return { error: "Form not found." };
+  const parsed = directRecipientSchema.safeParse({
+    fullName: fd.get("fullName") ?? "",
+    email: fd.get("email") ?? "",
+    phone: fd.get("phone") ?? "",
+  });
+  if (!parsed.success) {
+    const fields: Record<string, string> = {};
+    for (const issue of parsed.error.issues) fields[String(issue.path[0] ?? "form")] ??= issue.message;
+    return { error: "Please check the highlighted fields.", fields };
+  }
+  const result = await sendFormToPerson(formId, parsed.data, { includeAlreadySent: fd.get("includeAlreadySent") === "yes", sentById: user.id });
+  if ("error" in result) return { error: result.error };
+  revalidatePath(`/admin/forms/${formId}`);
+  revalidatePath("/admin/forms");
+  const qs = new URLSearchParams({ sent: result.emailed ? "1" : "0", failed: result.emailed ? "0" : "1", skipped: "0" });
   redirect(`/admin/forms/${formId}?${qs}`);
 }
 
@@ -99,6 +132,19 @@ export async function scheduleInterviewsAction(formId: string, _: InterviewFormS
     failed: String(summary.failed),
   });
   redirect(`/admin/forms/${formId}?${qs}`);
+}
+
+export async function eraseFormPersonAction(requestId: string, applicantId: string, fd: FormData) {
+  const user = await requireAdmin();
+  if (fd.get("confirm") !== "yes" || !uuid.safeParse(applicantId).success) return;
+  const result = await eraseApplicant(applicantId);
+  await audit("applicant.erase", {
+    actorUserId: user.id,
+    entityType: "applicant",
+    entityId: applicantId,
+    metadata: { documents: result.documents, fileErrors: result.fileErrors, reason: "manual" },
+  });
+  revalidatePath(`/admin/forms/responses/${requestId}`);
 }
 
 export async function cancelInterviewAction(requestId: string, interviewId: string) {

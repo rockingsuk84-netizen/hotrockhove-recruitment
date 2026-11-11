@@ -8,7 +8,8 @@ import { Alert, APPLICATION_STATUS_TONE, Badge, Button, Card, LinkButton, PageHe
 import { formatDate, STATUS_LABELS } from "@/lib/format";
 import { requireStaff } from "@/lib/session";
 import { applicantsWithCv, MAX_RECIPIENTS_PER_SEND } from "@/services/forms";
-import { sendFormAction } from "../../actions";
+import { sendFormAction, sendFormToPersonAction } from "../../actions";
+import { DirectSendForm } from "./direct-send-form";
 import { SendForm } from "./send-form";
 
 export const metadata = { title: "Send form" };
@@ -96,6 +97,9 @@ export default async function SendFormPage({ params, searchParams }: PageProps<"
         <Alert tone="error">This form is archived and can&apos;t be sent.</Alert>
       ) : (
         <>
+          <DirectSendForm action={sendFormToPersonAction.bind(null, id)} />
+
+          <h2 className="mb-3 font-semibold text-stone-900">Send to people who applied</h2>
           <form method="get" className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="sm:w-64">
               <label htmlFor="job" className="mb-1 block text-sm font-medium text-stone-800">

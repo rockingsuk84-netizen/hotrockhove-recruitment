@@ -12,6 +12,8 @@ import { answerRows, CV_INPUT, parseAnswers, type FormDefinition } from "@/lib/f
 import { formatDate } from "@/lib/format";
 import { getSetting } from "@/lib/settings";
 import { getActiveStorage } from "@/lib/storage";
+import { normaliseEmail } from "@/lib/validation";
+import { z } from "zod";
 
 /** How long an emailed form link stays valid. */
 export const FORM_LINK_DAYS = 30;
@@ -177,6 +179,87 @@ export async function sendFormToApplications(
     metadata: { sent, failed, skippedAlreadySent, skippedErased },
   });
   return { sent, failed, skippedAlreadySent, skippedErased };
+}
+
+export const directRecipientSchema = z.object({
+  fullName: z.string().trim().min(2, "Enter their full name.").max(100, "Name is too long."),
+  email: z.string().trim().max(254).email("Enter a valid email address.").transform(normaliseEmail),
+  phone: z
+    .string()
+    .trim()
+    .max(30, "Enter a valid phone number.")
+    .refine((v) => v === "" || (/^\+?[0-9 ()-]{7,}$/.test(v) && v.replace(/\D/g, "").length >= 10), "Enter a valid phone number."),
+});
+export type DirectRecipient = z.infer<typeof directRecipientSchema>;
+
+/**
+ * Send a form to someone by email, whether or not they have applied. An
+ * existing applicant with that email is reused (their name and phone are not
+ * overwritten) and linked through their latest application; otherwise a new
+ * applicant record is created with no application.
+ */
+export async function sendFormToPerson(
+  formId: string,
+  person: DirectRecipient,
+  opts: { includeAlreadySent: boolean; sentById: string },
+): Promise<{ ok: true; emailed: boolean; existing: boolean } | { error: string }> {
+  const form = await db.query.forms.findFirst({ where: and(eq(t.forms.id, formId), eq(t.forms.status, "active")) });
+  if (!form) return { error: "This form can't be sent because it is archived or doesn't exist." };
+
+  const [applicant] = await db
+    .insert(t.applicants)
+    .values({ email: person.email, fullName: person.fullName, phone: person.phone })
+    .onConflictDoUpdate({ target: t.applicants.email, set: { updatedAt: new Date() } })
+    .returning({ id: t.applicants.id, createdAt: t.applicants.createdAt, updatedAt: t.applicants.updatedAt });
+  const existing = applicant.createdAt.getTime() !== applicant.updatedAt.getTime();
+
+  if (!opts.includeAlreadySent) {
+    const prior = await db.query.formRequests.findFirst({
+      where: and(
+        eq(t.formRequests.formId, formId),
+        eq(t.formRequests.applicantId, applicant.id),
+        inArray(t.formRequests.status, ["sent", "completed"]),
+      ),
+      columns: { status: true },
+    });
+    if (prior) {
+      return {
+        error:
+          prior.status === "completed"
+            ? "This person has already completed this form. Tick “Send again” to send another copy."
+            : "This person already has this form waiting. Use “Resend” on the form page, or tick “Send again”.",
+      };
+    }
+  }
+
+  const latest = await db.query.applications.findFirst({
+    where: eq(t.applications.applicantId, applicant.id),
+    orderBy: desc(t.applications.createdAt),
+    columns: { id: true },
+  });
+
+  const { token, hash } = newFormToken();
+  const [req] = await db
+    .insert(t.formRequests)
+    .values({
+      formId,
+      applicantId: applicant.id,
+      applicationId: latest?.id ?? null,
+      definition: form.definition,
+      tokenHash: hash,
+      sentById: opts.sentById,
+      expiresAt: expiry(),
+    })
+    .returning({ id: t.formRequests.id });
+  const emailed = await deliver(req.id, token);
+
+  await audit("form.send", {
+    actorUserId: opts.sentById,
+    entityType: "form",
+    entityId: formId,
+    metadata: { direct: true, newPerson: !existing, sent: emailed ? 1 : 0, failed: emailed ? 0 : 1 },
+  });
+  return { ok: true, emailed, existing };
 }
 
 /** Email a fresh link (the old one stops working) and restart the expiry clock. */

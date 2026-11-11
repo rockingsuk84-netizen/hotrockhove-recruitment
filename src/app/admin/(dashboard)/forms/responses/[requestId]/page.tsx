@@ -8,8 +8,8 @@ import { Badge, Button, Card, LinkButton, PageHeader } from "@/components/ui";
 import { formatInterviewTime, MODE_LABELS } from "@/lib/interviews";
 import { answerRows } from "@/lib/forms/definition";
 import { formatDateTime } from "@/lib/format";
-import { requireStaff } from "@/lib/session";
-import { cancelInterviewAction, decideFormAction } from "../../actions";
+import { canManageSettings, requireStaff } from "@/lib/session";
+import { cancelInterviewAction, decideFormAction, eraseFormPersonAction } from "../../actions";
 import { OFFER_DECISION } from "@/services/forms";
 import { DecisionForm } from "./decision-form";
 
@@ -18,7 +18,7 @@ export const metadata = { title: "Form response" };
 const decider = alias(t.users, "decider");
 
 export default async function FormResponsePage({ params }: PageProps<"/admin/forms/responses/[requestId]">) {
-  await requireStaff();
+  const user = await requireStaff();
   const { requestId } = await params;
   if (!z.string().uuid().safeParse(requestId).success) notFound();
 
@@ -187,6 +187,25 @@ export default async function FormResponsePage({ params }: PageProps<"/admin/for
                   interviewed={Boolean(interview && interview.scheduledAt <= new Date())}
                 />
               )}
+            </Card>
+          )}
+
+          {/* People sent a form without applying have no application page, so erasure lives here. */}
+          {!r.applicationId && canManageSettings(user) && !applicant.erasedAt && (
+            <Card className="border-red-200 p-5">
+              <h2 className="font-semibold text-red-800">Erase this person&apos;s data</h2>
+              <p className="mt-1 text-sm text-stone-600">
+                Permanently deletes their files and form answers and anonymises their record. This cannot be undone.
+              </p>
+              <form action={eraseFormPersonAction.bind(null, r.id, applicant.id)} className="mt-3 space-y-3">
+                <label className="flex items-start gap-2 text-sm text-stone-800">
+                  <input type="checkbox" name="confirm" value="yes" required className="mt-0.5 h-4 w-4 accent-red-700" />
+                  I understand this is permanent.
+                </label>
+                <Button type="submit" variant="danger" className="w-full">
+                  Erase data
+                </Button>
+              </form>
             </Card>
           )}
         </aside>

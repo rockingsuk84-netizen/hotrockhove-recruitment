@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { Icon } from "@/components/site/icons";
-import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
+import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import {
   confirmInputName,
   CV_INPUT,
@@ -171,8 +171,25 @@ export function FormRenderer(props: Props) {
           </Field>
         );
       }
-      case "yes_no":
-      case "choice": {
+      case "choice":
+        if (f.display === "dropdown" && !f.multiple) {
+          return (
+            <Field key={f.id} label={f.label} htmlFor={name} required={f.required} error={err} hint={f.help}>
+              <Select id={name} name={name} required={f.required} defaultValue="" aria-invalid={!!err} aria-describedby={describedBy(name, errors, !!f.help)}>
+                <option value="" disabled={f.required}>
+                  Choose…
+                </option>
+                {f.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          );
+        }
+      // falls through
+      case "yes_no": {
         const multiple = f.type === "choice" && f.multiple;
         const options = f.type === "yes_no" ? [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] : f.options;
         return (

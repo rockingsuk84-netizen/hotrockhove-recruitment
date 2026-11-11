@@ -18,7 +18,8 @@ export type FormField =
   | (Base & { type: "short_text" | "long_text"; required: boolean; maxLength: number })
   | (Base & { type: "date"; required: boolean })
   | (Base & { type: "yes_no"; required: boolean })
-  | (Base & { type: "choice"; required: boolean; multiple: boolean; options: Option[] })
+  /** `display: "dropdown"` shows a single-choice question as a drop-down list instead of radio buttons. */
+  | (Base & { type: "choice"; required: boolean; multiple: boolean; options: Option[]; display?: "dropdown" })
   | (Base & { type: "availability_grid"; required: boolean; rows: Option[]; columns: Option[] })
   /** Asked only when the applicant has no CV on file; optional (to replace it) when they do. */
   | (Base & { type: "cv_upload" })
@@ -62,7 +63,16 @@ export const formFieldSchema = z.discriminatedUnion("type", [
   }),
   z.object({ ...base, type: z.literal("date"), required: z.boolean() }),
   z.object({ ...base, type: z.literal("yes_no"), required: z.boolean() }),
-  z.object({ ...base, type: z.literal("choice"), required: z.boolean(), multiple: z.boolean(), options: z.array(option).min(1).max(30) }),
+  z
+    .object({
+      ...base,
+      type: z.literal("choice"),
+      required: z.boolean(),
+      multiple: z.boolean(),
+      options: z.array(option).min(1).max(30),
+      display: z.literal("dropdown").optional(),
+    })
+    .refine((f) => !(f.multiple && f.display === "dropdown"), { message: "A drop-down can only allow one choice" }),
   z.object({
     ...base,
     type: z.literal("availability_grid"),

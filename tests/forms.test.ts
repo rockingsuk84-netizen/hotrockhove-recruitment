@@ -23,7 +23,7 @@ const complete = {
   [gridInputName("availability", "mon")]: ["afternoon", "evening"],
   [gridInputName("availability", "sun")]: "afternoon",
   [inputName("currently_employed")]: "no",
-  [inputName("start_date")]: "Immediately",
+  [inputName("start_date")]: "immediately",
   [inputName("holidays_booked")]: "no",
   [inputName("position")]: ["front_of_house", "kitchen_team"],
   [inputName("work_history")]: "Waiter, 2 years",
@@ -105,8 +105,26 @@ describe("parseAnswers", () => {
   });
 
   it("enforces text length limits", () => {
-    const r = parseAnswers(AVAILABILITY_FORM, fd({ ...complete, [inputName("start_date")]: "x".repeat(101) }), { cvOnFile: true });
+    const r = parseAnswers(AVAILABILITY_FORM, fd({ ...complete, [inputName("work_history")]: "x".repeat(3001) }), { cvOnFile: true });
     assert.ok(!r.ok);
+  });
+
+  it("takes the start date from the drop-down, asking for a date only when chosen", () => {
+    const bad = parseAnswers(AVAILABILITY_FORM, fd({ ...complete, [inputName("start_date")]: "next_year" }), { cvOnFile: true });
+    assert.ok(!bad.ok && inputName("start_date") in bad.errors);
+
+    const needsDate = parseAnswers(AVAILABILITY_FORM, fd({ ...complete, [inputName("start_date")]: "specific_date" }), { cvOnFile: true });
+    assert.ok(!needsDate.ok && inputName("start_on") in needsDate.errors);
+
+    const dated = parseAnswers(
+      AVAILABILITY_FORM,
+      fd({ ...complete, [inputName("start_date")]: "specific_date", [inputName("start_on")]: "2026-12-01" }),
+      { cvOnFile: true },
+    );
+    assert.ok(dated.ok);
+    const rows = Object.fromEntries(answerRows(AVAILABILITY_FORM, dated.answers).map((x) => [x.field.id, x.text]));
+    assert.equal(rows.start_date, "On a specific date");
+    assert.equal(rows.start_on, "1 December 2026");
   });
 });
 
